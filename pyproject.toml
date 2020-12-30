@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "fastapi_session"
+version = "0.0.0"
+description = "A fastapi library for managing session storage"
+authors = ["Maxim Yakovenko <mxyakovenko9@gmail.com>", "Zarlo <5899@zarlo.dev>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/TheLazzziest/faskapi_session"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+fastapi = "^0.63.0"
+aioredis = "^1.3.1"
+aiofiles = "^0.6.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "setuptools >= 40.6.0", "wheel"]
+build-backend = "setuptools.build_meta"
