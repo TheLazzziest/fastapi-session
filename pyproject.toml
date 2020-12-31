@@ -9,6 +9,7 @@ repository = "https://github.com/TheLazzziest/faskapi_session"
 
 [tool.poetry.dependencies]
 python = "^3.8"
+aiofiles = "^0.6.0"
 
 [tool.poetry.dev-dependencies]
 fastapi = "^0.63.0"
