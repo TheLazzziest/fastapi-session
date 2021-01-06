@@ -1,12 +1,11 @@
 from .session import Session
-from .session_interface import SessionInterface, BackendInterface
-from .session_manager import SessionManager
-from .session_filesystembackend import FileSystemBackend
+from .interfaces import SessionInterface
+from .managers import SessionManager
+from .backends import FileSystemInterface
 
-__all__ = [
-    FileSystemBackend,
+__all__ = (
+    FileSystemInterface,
     SessionInterface,
-    BackendInterface,
     SessionManager,
-    Session
-]
+    Session,
+)
