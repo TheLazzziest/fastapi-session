@@ -4,7 +4,8 @@ import string
 from typing import Callable, Awaitable, Union
 
 from fastapi import Request, Cookie, Response
-from .session_interface import BackendInterface
+
+from .interfaces import BackendInterface
 
 class SessionManager:
 
