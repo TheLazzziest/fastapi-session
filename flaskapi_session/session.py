@@ -1,4 +1,4 @@
-from .session_interface import SessionInterface
+from .interfaces import SessionInterface
 
 class Session(dict):
     def __init__(self, session_backend: SessionInterface):
