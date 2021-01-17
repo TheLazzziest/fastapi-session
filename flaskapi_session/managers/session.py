@@ -47,13 +47,19 @@ class SessionManager:
 
     async def load_session(self, app: FastAPI, cookie: str) -> AsyncSession:
         """A factory method for loading a session storage."""
+        session_id: str = await self._session_id_loader(cookie)
         return await AsyncSession.create(
             self._backend_type,
             self._secret_key,
-            await self._session_id_loader(cookie),
+            session_id,
             backend_kwargs={
+                # If a backend is of filesystem type
+                # then a session id can be used
+                # as a source of a session file as an example
                 "adapter": (
-                    await self._adapter_loader(app) if self._adapter_loader else None
+                    await self._adapter_loader(app)
+                    if self._adapter_loader
+                    else session_id
                 ),
             },
             loop=self._loop,
