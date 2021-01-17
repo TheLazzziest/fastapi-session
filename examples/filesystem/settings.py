@@ -1,10 +1,9 @@
 import secrets
 from datetime import datetime, timedelta
-from functools import lru_cache
-from typing import Dict, List, Optional
+from typing import Optional
 
 from fastapi.security import HTTPBasicCredentials
-from pydantic import BaseSettings, RedisDsn
+from pydantic import BaseSettings
 
 __all__ = ("Settings",)
 

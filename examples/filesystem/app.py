@@ -3,11 +3,9 @@ import typing
 import json
 from http import HTTPStatus
 from hashlib import sha256
-from uuid import uuid4
 from typing import Any, List
 
 
-from aioredis import create_redis_pool, RedisConnection
 from itsdangerous.exc import BadTimeSignature, SignatureExpired
 from fastapi import Depends, FastAPI, Request, Response, HTTPException
 from fastapi.responses import JSONResponse
