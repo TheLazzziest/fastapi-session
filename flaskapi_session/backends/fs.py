@@ -67,6 +67,9 @@ class FSBackend(FileStorageMixin, DisableMethodsMixin, BackendInterface):
         """Load session data from the storage source."""
         self._data = await super().load()
 
+    async def save(self) -> None:
+        await super().save(self._data)
+
     async def clear(self, pattern: str) -> None:
         """Clear session storage."""
         self._data.clear()
