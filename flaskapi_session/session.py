@@ -10,7 +10,19 @@ from .backends import BackendInterface
 __all__ = ("AsyncSession",)
 
 
-class AsyncSession:
+class AsyncFileSessionMixin:
+    """A mixin for adding some helper methods for managin filesystem session storage."""
+
+    async def save(self) -> None:
+        """Save the state of the session to a storage file."""
+        await self.backend.save()
+
+    async def load(self) -> None:
+        """Load the session from a saved storage file."""
+        await self.backend.load()
+
+
+class AsyncSession(AsyncFileSessionMixin):
     """
     An async generic backend with template methods for managing a session storage backend.
     It supports a different kind of backends .
