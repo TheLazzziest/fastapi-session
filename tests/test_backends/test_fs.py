@@ -3,17 +3,18 @@ import asyncio
 import pytest
 import typing
 import sys
+import uuid
 from pathlib import Path
 from concurrent import futures
 
-from flaskapi_session.backends import FileSystemInterface
+from flaskapi_session.backends import FSBackend
 
 
 @pytest.mark.asyncio
 async def test_concurrent_access(
     session_data: typing.Dict[str, typing.Any],
     session_source: typing.IO[bytes],
-    fs_backend: FileSystemInterface,
+    fs_backend: FSBackend,
     event_loop: asyncio.AbstractEventLoop,
 ):
     """Test concurrent access of mutltple backends to the same data source."""
@@ -21,9 +22,7 @@ async def test_concurrent_access(
 
     # Prepare new session backend
     path = Path(session_source.name)
-    new_fs_backend = await FileSystemInterface.create(
-        path.name, str(path.parent), event_loop
-    )
+    new_fs_backend = await FSBackend.create(path.name, event_loop)
 
     # Prepare modified session data
     testing_key = list(session_data.keys())[0]
@@ -43,7 +42,7 @@ async def test_concurrent_access(
         # Try to load unmodified data
         fs_backend.load(),
         # Try to save modified data
-        new_fs_backend.save(),
+        new_fs_backend.save(new_fs_backend.data),
         new_fs_backend.load(),
     ]
     await asyncio.gather(*coros, loop=event_loop)
@@ -62,7 +61,7 @@ async def test_concurrent_access(
 @pytest.mark.asyncio
 async def test_load_session_data(
     subtests: typing.Any,
-    fs_backend: FileSystemInterface,
+    fs_backend: FSBackend,
     session_data: typing.Dict[str, typing.Any],
 ):
     """Test session storage consistency after deserialization."""
@@ -71,15 +70,17 @@ async def test_load_session_data(
     backend_data_key_subset = list(session_data_keys)[: (data_size // 2)]
     for key in backend_data_key_subset:
         with subtests.test(msg=f"Checking value by the key:{key}"):
-            assert key in fs_backend
+            assert await fs_backend.exists(key) == 1
 
 
 @pytest.mark.asyncio
 async def test_backend_data_key_length(
-    fs_backend: FileSystemInterface, session_data: typing.Dict[str, typing.Any]
+    session_id: uuid.UUID,
+    fs_backend: FSBackend,
+    session_data: typing.Dict[str, typing.Any],
 ):
-    """Check correct supporting for len magic method."""
+    """Check correct supporting for len magic  method."""
     keys = session_data.keys()
     keys_length = len(keys)
-    assert await fs_backend.len() == keys_length
+    assert await fs_backend.len(session_id) == keys_length
     assert len(fs_backend) == keys_length
