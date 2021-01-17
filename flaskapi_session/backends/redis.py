@@ -5,7 +5,7 @@ from itertools import chain
 from aioredis import RedisConnection
 from dataclasses import dataclass, field
 
-from ._mixins import NamespaceMixin, DisableMethodsMixin
+from ._mixins import DisableMethodsMixin
 from .interfaces import BackendInterface, FactoryInterface
 
 
