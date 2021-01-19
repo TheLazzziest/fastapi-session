@@ -20,7 +20,6 @@ An opinionated fastapi session manager with multiple backends
 
 | Backend                                          | Support |
 | ------------------------------------------------ | ------- |
-| [memory](#memory)                                | No      |
 | [filesystem](https://github.com/Tinche/aiofiles) | yes     |
 | [database](#database)                            | No      |
 | [redis](https://github.com/aio-libs/aioredis)    | Yes     |
