@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 from concurrent import futures
 
-from flaskapi_session.backends import FSBackend
+from fastapi_session.backends import FSBackend
 
 
 @pytest.mark.asyncio
@@ -42,7 +42,7 @@ async def test_concurrent_access(
         # Try to load unmodified data
         fs_backend.load(),
         # Try to save modified data
-        new_fs_backend.save(new_fs_backend.data),
+        new_fs_backend.save(),
         new_fs_backend.load(),
     ]
     await asyncio.gather(*coros, loop=event_loop)
