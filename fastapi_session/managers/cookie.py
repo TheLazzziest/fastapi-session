@@ -6,14 +6,16 @@ from functools import cached_property
 from fastapi import Request, Response
 from itsdangerous import TimestampSigner
 
-from .mixins import CookieSecuredMixin
+from ..settings import get_session_settings, SessionSettings
+
+settings = get_session_settings()
 
 
 @dataclass(eq=False, order=False, repr=False, frozen=False)
-class CookieManager(CookieSecuredMixin):
+class CookieManager:
     """A HTTP cookie manager."""
 
-    session_cookie: str = field(default="FAPISESSID")
+    session_cookie: str = field(default=settings.SESSION_ID_KEY)
     secret_key: str = field(default="secret")
 
     @cached_property
@@ -36,13 +38,13 @@ class CookieManager(CookieSecuredMixin):
         response.set_cookie(
             self.session_cookie,
             b64encode(signed_id).decode("utf-8"),
-            max_age=self.max_age,
-            expires=self.expires,
-            path=self.path,
-            domain=self.domain,
-            secure=self.secure,
-            httponly=self.http_only,
-            samesite=self.same_site,
+            max_age=settings.MAX_AGE,
+            expires=settings.EXPIRES,
+            path=settings.PATH,
+            domain=settings.DOMAIN,
+            secure=settings.SECURE,
+            httponly=settings.HTTP_ONLY,
+            samesite=settings.SAME_SITE,
         )
         return response
 

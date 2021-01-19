@@ -3,12 +3,6 @@ from typing import Awaitable, Union, Optional
 
 from fastapi import FastAPI, Request, Response
 
-from ..settings import (
-    DATABASE_BACKEND_TYPE,
-    FS_BACKEND_TYPE,
-    MEMORY_BACKEND_TYPE,
-    REDIS_BACKEND_TYPE,
-)
 from ..session import AsyncSession
 
 from .cookie import CookieManager
@@ -20,12 +14,7 @@ class SessionManager:
     def __init__(
         self,
         secret_key: str,
-        backend_type: Union[
-            DATABASE_BACKEND_TYPE,
-            FS_BACKEND_TYPE,
-            MEMORY_BACKEND_TYPE,
-            REDIS_BACKEND_TYPE,
-        ],
+        backend_type: str,
         session_id_loader: Awaitable,
         backend_adapter_loader: Optional[Awaitable] = None,
         loop: Optional[asyncio.AbstractEventLoop] = None,
