@@ -13,12 +13,12 @@ from string import ascii_letters, printable
 from aioredis import RedisConnection, create_redis_pool
 from asynctempfile import NamedTemporaryFile
 
-from flaskapi_session import (
+from fastapi_session import (
     AsyncSession,
-    FSBackend,
     FS_BACKEND_TYPE,
-    RedisBackend,
+    FSBackend,
     REDIS_BACKEND_TYPE,
+    RedisBackend,
 )
 
 from .factories import generate_session_data

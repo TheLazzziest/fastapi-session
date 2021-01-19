@@ -3,7 +3,7 @@ import pytest
 import uuid
 import typing
 
-from flaskapi_session.backends import RedisBackend
+from fastapi_session.backends import RedisBackend
 
 
 @pytest.mark.asyncio

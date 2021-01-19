@@ -4,7 +4,7 @@ import uuid
 import secrets
 
 from aioredis import RedisConnection
-from flaskapi_session import (
+from fastapi_session import (
     AsyncSession,
     RedisBackend,
     REDIS_BACKEND_TYPE,

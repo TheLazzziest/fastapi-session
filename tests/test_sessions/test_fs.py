@@ -4,7 +4,7 @@ import secrets
 import uuid
 
 from asynctempfile import NamedTemporaryFile
-from flaskapi_session import (
+from fastapi_session import (
     AsyncSession,
     FSBackend,
     FS_BACKEND_TYPE,
