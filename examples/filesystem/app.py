@@ -1,28 +1,28 @@
 import logging
 import typing
 import json
+import secrets
 from http import HTTPStatus
 from hashlib import sha256
 from typing import Any, List
-
+from uuid import uuid4
 
 from itsdangerous.exc import BadTimeSignature, SignatureExpired
 from fastapi import Depends, FastAPI, Request, Response, HTTPException
 from fastapi.responses import JSONResponse
-from flaskapi_session import (
+from fastapi_session import (
     FS_BACKEND_TYPE,
     SessionManager,
+    SessionSettings,
     CookieManager,
     CookieSessionMiddleware,
 )
 
-from .settings import Settings
-
 
 async def session_id_generator(app: FastAPI) -> str:
     """A delegate for generating of a session id."""
-    settings: Settings = app.state.settings
-    return sha256(f"{settings.SECRET_KEY}:{uuid4()}".encode("utf-8")).hexdigest()
+    secret_key = app.state.secret_key
+    return sha256(f"{secret_key}:{uuid4()}".encode("utf-8")).hexdigest()
 
 
 async def session_id_loader(cookie: object) -> Any:
@@ -33,24 +33,27 @@ async def session_id_loader(cookie: object) -> Any:
 def invalid_cookie_callback(
     request: Request, exc: typing.Union[BadTimeSignature, SignatureExpired]
 ) -> Response:
+    settings = request.app.state.settings
     response = Response(status_code=HTTPStatus.BAD_REQUEST)
-    response.delete_cookie(settings.SESSION_COOKIE)
+    response.delete_cookie(settings.SESSION_ID_KEY)
     return response
 
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-settings = Settings()
+secret_key = secrets.token_urlsafe(32)
+settings = SessionSettings()
 cookie = CookieManager(
-    secret_key=settings.SECRET_KEY,
-    session_cookie=settings.SESSION_COOKIE,
+    secret_key=secret_key,
+    session_cookie=settings.SESSION_ID_KEY,
 )
 session = SessionManager(
-    secret_key=settings.SECRET_KEY,
+    secret_key=secret_key,
     backend_type=FS_BACKEND_TYPE,
     session_id_loader=session_id_loader,
 )
+app.state.secret_key = secret_key
 app.state.settings = settings
 
 # Connect a session middleware to the FastAPI app
