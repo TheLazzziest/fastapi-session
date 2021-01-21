@@ -1,6 +1,7 @@
 import logging
 import typing
 import json
+import secrets
 from http import HTTPStatus
 from hashlib import sha256
 from uuid import uuid4
@@ -11,20 +12,19 @@ from aioredis import create_redis_pool, RedisConnection
 from itsdangerous.exc import BadTimeSignature, SignatureExpired
 from fastapi import Depends, FastAPI, Request, Response, HTTPException
 from fastapi.responses import JSONResponse
-from flaskapi_session import (
+from fastapi_session import (
     REDIS_BACKEND_TYPE,
     SessionManager,
     CookieManager,
     CookieSessionMiddleware,
+    SessionSettings,
 )
-
-from .settings import Settings
 
 
 async def session_id_generator(app: FastAPI) -> str:
     """A delegate for generating of a session id."""
-    settings: Settings = app.state.settings
-    return sha256(f"{settings.SECRET_KEY}:{uuid4()}".encode("utf-8")).hexdigest()
+    secret_key: Settings = app.state.secret_key
+    return sha256(f"{secret_key}:{uuid4()}".encode("utf-8")).hexdigest()
 
 
 async def session_id_loader(cookie: object) -> Any:
@@ -39,26 +39,29 @@ async def backend_adapter_loader(app: FastAPI) -> RedisConnection:
 def invalid_cookie_callback(
     request: Request, exc: typing.Union[BadTimeSignature, SignatureExpired]
 ) -> Response:
+    settings = request.app.state.settings
     response = Response(status_code=HTTPStatus.BAD_REQUEST)
-    response.delete_cookie(settings.SESSION_COOKIE)
+    response.delete_cookie(settings.SESSION_ID_KEY)
     return response
 
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-settings = Settings()
+settings = SessionSettings()
+secret_key = secrets.token_urlsafe(32)
 cookie = CookieManager(
-    secret_key=settings.SECRET_KEY,
-    session_cookie=settings.SESSION_COOKIE,
+    secret_key=secret_key,
+    session_cookie=settings.SESSION_ID_KEY,
 )
 session = SessionManager(
-    secret_key=settings.SECRET_KEY,
+    secret_key=secret_key,
     backend_type=REDIS_BACKEND_TYPE,
     session_id_loader=session_id_loader,
     backend_adapter_loader=backend_adapter_loader,
 )
 app.state.settings = settings
+app.state.secret_key = secret_key
 
 # Connect a session middleware to the FastAPI app
 app.add_middleware(
@@ -71,7 +74,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def open_session():
-    conn_pool = await create_redis_pool(settings.REDIS_DSN)
+    conn_pool = await create_redis_pool("redis://localhost:6379/1")
     app.state.redis = conn_pool
 
 
