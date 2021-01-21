@@ -2,7 +2,7 @@ import json
 import typing
 
 from fastapi import FastAPI, Request, Response
-from itsdangerous.exc import BadTimeSignature, SignatureExpired
+from itsdangerous.exc import BadTimeSignature, SignatureExpired, BadSignature
 
 from starlette.types import Message, Receive, Scope, Send
 
@@ -19,9 +19,11 @@ class CookieSessionMiddleware:
         app: FastAPI,
         cookie_manager: CookieManager,
         session_manager: SessionManager,
-        on_invalid_cookie: typing.Callable[
-            [Request, typing.Union[BadTimeSignature, SignatureExpired]], Response
-        ],
+        on_invalid_cookie: typing.Optional[
+            typing.Callable[
+                [Request, typing.Union[BadTimeSignature, SignatureExpired]], Response
+            ]
+        ] = None,
     ) -> None:
         """
         :param app: A fastapi app instance
@@ -53,13 +55,16 @@ class CookieSessionMiddleware:
                 scope["app"],
                 cookie,
             )
-        except (BadTimeSignature, SignatureExpired) as exc:
-            # @TODO: Add noticing about the invalid cookie
+        except (BadSignature, BadTimeSignature, SignatureExpired) as exc:
+            if not self.on_invalid_cookie:
+                return await self.app(scope, receive, send)
             response = self.on_invalid_cookie(request, exc)
             if scope["type"] == "websocket":
                 await send({"type": "websocket.close", "code": 1000})
             else:
                 await response(scope, receive, send)
             return
+        except Exception as exc:
+            raise RuntimeError("Internal server error occured") from exc
 
         await self.app(scope, receive, send)
