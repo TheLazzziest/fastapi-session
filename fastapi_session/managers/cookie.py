@@ -49,5 +49,7 @@ class CookieManager:
         return response
 
     def remove_cookie(self, response: Response) -> Response:
-        response.delete_cookie(self.session_cookie, path=self.path, domain=self.domain)
+        response.delete_cookie(
+            self.session_cookie, path=settings.PATH, domain=settings.DOMAIN
+        )
         return response
