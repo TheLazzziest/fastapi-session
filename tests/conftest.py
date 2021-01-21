@@ -13,12 +13,15 @@ from string import ascii_letters, printable
 from aioredis import RedisConnection, create_redis_pool
 from asynctempfile import NamedTemporaryFile
 
+from fastapi import FastAPI
 from fastapi_session import (
     AsyncSession,
     FS_BACKEND_TYPE,
     FSBackend,
     REDIS_BACKEND_TYPE,
     RedisBackend,
+    SessionSettings,
+    get_session_settings,
 )
 
 from .factories import generate_session_data
@@ -34,6 +37,11 @@ def session_id() -> str:
 async def session_data() -> typing.Dict[str, typing.Any]:
     """Create a predefined session data."""
     return generate_session_data()
+
+
+@pytest.fixture(scope="function")
+def settings() -> SessionSettings:
+    yield get_session_settings()
 
 
 @pytest.fixture(scope="function")
@@ -93,7 +101,7 @@ async def fs_session(
     session_id: UUID,
     event_loop: asyncio.AbstractEventLoop,
     redis_connection: RedisConnection,
-):
+) -> typing.Generator[AsyncSession, None, None]:
     backend = await AsyncSession.create(
         FS_BACKEND_TYPE,
         secrets.token_urlsafe(32),
@@ -112,7 +120,7 @@ async def redis_session(
     session_id: UUID,
     event_loop: asyncio.AbstractEventLoop,
     redis_connection: RedisConnection,
-):
+) -> typing.Generator[AsyncSession, None, None]:
     yield await AsyncSession.create(
         REDIS_BACKEND_TYPE,
         secrets.token_urlsafe(32),
@@ -122,3 +130,8 @@ async def redis_session(
         },
         loop=event_loop,
     )
+
+
+@pytest.fixture(scope="function")
+def app() -> typing.Generator[FastAPI, None, None]:
+    yield FastAPI()
