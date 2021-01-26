@@ -9,11 +9,9 @@ import pytest
 from itsdangerous import BadTimeSignature, SignatureExpired
 from fastapi import FastAPI, Request, Response, status
 from fastapi_session import (
-    CookieManager,
     SessionManager,
     SessionSettings,
-    CookieSessionMiddleware,
-    FS_BACKEND_TYPE,
+    SessionMiddleware,
 )
 from pytest_mock import MockerFixture
 from httpx import AsyncClient
@@ -35,25 +33,21 @@ async def test_handling_invalid_cookie(
     mocked_handler = mock.MagicMock(
         return_value=Response(status_code=status.HTTP_400_BAD_REQUEST)
     )
-    cookie = CookieManager(
-        session_cookie=settings.SESSION_ID_KEY, secret_key=secret_key
-    )
     session = SessionManager(
         secret_key=secret_key,
-        backend_type=FS_BACKEND_TYPE,
+        settings=settings,
         session_id_loader=session_id_loader,
     )
     app.add_middleware(
-        CookieSessionMiddleware,
-        cookie_manager=cookie,
-        session_manager=session,
+        SessionMiddleware,
+        manager=session,
         on_invalid_cookie=mocked_handler,
     )
     async with AsyncClient(app=app, base_url="http://testserver") as client:
         response = await client.get(
             "/",
             cookies={
-                settings.SESSION_ID_KEY: sha256(
+                settings.SESSION_COOKIE: sha256(
                     f"{secret_key}:{uuid4()}".encode("utf-8")
                 ).hexdigest()
             },
@@ -78,18 +72,16 @@ async def test_ignoring_invalid_cookie(app: FastAPI, settings: SessionSettings):
         return response
 
     secret_key = secrets.token_urlsafe(32)
-    cookie = CookieManager(
-        session_cookie=settings.SESSION_ID_KEY, secret_key=secret_key
-    )
     session = SessionManager(
         secret_key=secret_key,
-        backend_type=FS_BACKEND_TYPE,
+        settings=settings,
         session_id_loader=session_id_loader,
     )
-
     app.add_middleware(
-        CookieSessionMiddleware, cookie_manager=cookie, session_manager=session
+        SessionMiddleware,
+        manager=session,
     )
+
     app.add_api_route("/", index)
 
     async with AsyncClient(app=app, base_url="http://testserver") as client:
@@ -98,7 +90,7 @@ async def test_ignoring_invalid_cookie(app: FastAPI, settings: SessionSettings):
             cookies={
                 # Generate an invalid session id in cookies
                 # in order to produce an error
-                settings.SESSION_ID_KEY: sha256(
+                settings.SESSION_COOKIE: sha256(
                     f"{secret_key}:{uuid4()}".encode("utf-8")
                 ).hexdigest()
             },
