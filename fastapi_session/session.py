@@ -24,8 +24,7 @@ class AsyncFileSessionMixin:
 
 class AsyncSession(AsyncFileSessionMixin):
     """
-    An async generic backend with template methods for managing a session storage backend.
-    It supports a different kind of backends .
+    A backend template representing an abstract methods for managing a particular session storage.
     """
 
     def __init__(
@@ -36,8 +35,9 @@ class AsyncSession(AsyncFileSessionMixin):
         loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     ):
         """
-        :param secret_key: An application secret key
-        :param session_id: A user session id
+        :param str secret_key: An application secret key
+        :param str session_id: A user session id
+        :param BackendInterface backend: An instance of a session backend
         """
         self.namespace = sha256(
             f"{secret_key}:{session_id}".encode("utf-8")
@@ -48,13 +48,20 @@ class AsyncSession(AsyncFileSessionMixin):
     @classmethod
     async def create(
         cls,
-        backend: str,
         secret_key: str,
         session_id: str,
+        backend: str,
         backend_kwargs: typing.Dict[str, typing.Any],
         loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     ) -> BackendInterface:
-        """A method for instantiating a session storage backend."""
+        """A method for instantiating a session storage backend.
+
+        :param str secret_key: An application secret key
+        :param str session_id: A user session id
+        :param str backend: An absolute path to session id
+        :param dict backend_kwargs: Session backend parameters
+        :param AbstractEventLoop loop: An instance of the running event loop
+        """
         backend: typing.Optional[BackendInterface] = cls.load_backend(backend)
         if backend is None:
             raise ValueError(f"Undefined backend type: {backend}")
@@ -121,5 +128,8 @@ class AsyncSession(AsyncFileSessionMixin):
     async def delete(self, *keys: typing.Sequence[str]) -> str:
         """Remove a key and its associated value from a storage."""
         return await self.backend.delete(
-            map(lambda key: f"{self.namespace}{sha256(key).hexdigest()}", keys)
+            *map(
+                lambda key: f"{self.namespace}{sha256(key.encode('utf-8')).hexdigest()}",
+                keys,
+            )
         )
