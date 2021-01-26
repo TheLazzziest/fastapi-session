@@ -42,7 +42,9 @@ class RedisBackend(DisableMethodsMixin, FactoryInterface, BackendInterface):
         return cls(adapter, loop)
 
     async def clear(self, pattern: str) -> None:
-        await self.adapter.delete(*(await self.adapter.keys(pattern)))
+        keys = await self.adapter.keys(pattern)
+        if len(keys) > 0:
+            await self.adapter.delete(*keys)
 
     async def keys(self, pattern: str) -> typing.List[str]:
         return await self.adapter.keys(pattern)
