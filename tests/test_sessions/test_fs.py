@@ -16,9 +16,9 @@ async def test_create_fs_backend(
     session_source: NamedTemporaryFile, event_loop: asyncio.AbstractEventLoop
 ):
     session = await AsyncSession.create(
-        FS_BACKEND_TYPE,
         secrets.token_urlsafe(32),
-        uuid.uuid4(),
+        str(uuid.uuid4()),
+        FS_BACKEND_TYPE,
         backend_kwargs={
             "adapter": session_source.name.split("/").pop(),
         },

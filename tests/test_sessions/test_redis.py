@@ -16,9 +16,9 @@ async def test_create_redis_backend(
     event_loop: asyncio.AbstractEventLoop, redis_connection: RedisConnection
 ):
     session = await AsyncSession.create(
-        REDIS_BACKEND_TYPE,
         secrets.token_urlsafe(32),
-        uuid.uuid4(),
+        str(uuid.uuid4()),
+        REDIS_BACKEND_TYPE,
         backend_kwargs={
             "adapter": redis_connection,
         },
