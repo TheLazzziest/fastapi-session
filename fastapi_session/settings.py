@@ -4,13 +4,16 @@ from functools import lru_cache
 
 from pydantic import BaseSettings
 
+from .constants import FS_BACKEND_TYPE
+
 __all__ = ("SessionSettings", "get_session_settings")
 
 
 class SessionSettings(BaseSettings):
-
+    # Session settings
+    SESSION_BACKEND: typing.Optional[str] = FS_BACKEND_TYPE
     # Cookie settings
-    SESSION_ID_KEY: typing.Optional[str] = "FAPISESSID"
+    SESSION_COOKIE: typing.Optional[str] = "FAPISESSID"
     MAX_AGE: typing.Optional[int] = None
     EXPIRES: typing.Optional[int] = None
     DOMAIN: typing.Optional[str] = None
