@@ -12,17 +12,5 @@ from fastapi_session import (
 
 
 @pytest.mark.asyncio
-async def test_create_redis_backend(
-    event_loop: asyncio.AbstractEventLoop, redis_connection: RedisConnection
-):
-    session = await AsyncSession.create(
-        secrets.token_urlsafe(32),
-        str(uuid.uuid4()),
-        REDIS_BACKEND_TYPE,
-        backend_kwargs={
-            "adapter": redis_connection,
-        },
-        loop=event_loop,
-    )
-
-    assert isinstance(session.backend, RedisBackend)
+async def test_create_redis_backend(redis_session: AsyncSession):
+    assert isinstance(redis_session.backend, RedisBackend)
