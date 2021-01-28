@@ -102,7 +102,7 @@ async def fs_session(
     session_source: NamedTemporaryFile,
     event_loop: asyncio.AbstractEventLoop,
 ) -> typing.Generator[AsyncSession, None, None]:
-    backend = await AsyncSession.create(
+    session = await AsyncSession.create(
         secret_key=secrets.token_urlsafe(32),
         session_id=session_id,
         backend=FS_BACKEND_TYPE,
@@ -111,8 +111,8 @@ async def fs_session(
         },
         loop=event_loop,
     )
-    yield backend
-    await backend.clear(f"{session_id}*")
+    yield session
+    await session.clear()
 
 
 @pytest.fixture(scope="function")
@@ -121,7 +121,7 @@ async def redis_session(
     event_loop: asyncio.AbstractEventLoop,
     redis_connection: Redis,
 ) -> typing.Generator[AsyncSession, None, None]:
-    yield await AsyncSession.create(
+    session = await AsyncSession.create(
         secret_key=secrets.token_urlsafe(32),
         session_id=session_id,
         backend=REDIS_BACKEND_TYPE,
@@ -130,6 +130,8 @@ async def redis_session(
         },
         loop=event_loop,
     )
+    yield session
+    await session.clear()
 
 
 @pytest.fixture(scope="function")
