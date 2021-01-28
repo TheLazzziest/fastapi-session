@@ -53,7 +53,7 @@ class AsyncSession(AsyncFileSessionMixin):
         backend: str,
         backend_kwargs: typing.Dict[str, typing.Any],
         loop: typing.Optional[asyncio.AbstractEventLoop] = None,
-    ) -> BackendInterface:
+    ) -> "AsyncSession":
         """A method for instantiating a session storage backend.
 
         :param str secret_key: An application secret key
@@ -83,7 +83,7 @@ class AsyncSession(AsyncFileSessionMixin):
         return await self.backend.keys(f"{self.namespace}*")
 
     async def exists(self, *keys: typing.Sequence[str]) -> int:
-        """Check whether a key is present in a storage."""
+        """Check whether keys is present in a storage."""
         return await self.backend.exists(
             *map(
                 lambda key: f"{self.namespace}{sha256(key.encode('utf-8')).hexdigest()}",
@@ -92,11 +92,11 @@ class AsyncSession(AsyncFileSessionMixin):
         )
 
     async def len(self) -> int:
-        """Get a size of key pool of a storage."""
+        """Get the size of a storage key pool."""
         return await self.backend.len(self.namespace)
 
     async def get(self, *keys: typing.Sequence[str]) -> typing.Any:
-        """Get the value by the key from a storage."""
+        """Get the values by the keys from a storage."""
         return map(
             lambda value: pickle.loads(value) if value else None,
             await self.backend.get(
@@ -119,14 +119,17 @@ class AsyncSession(AsyncFileSessionMixin):
         """Bulk update of a storage with a passed data."""
         return await self.backend.update(
             map(
-                lambda key, value: f"{self.namespace}{sha256(key.encode('utf-8')).hexdigest()}",
+                lambda key, value: (
+                    f"{self.namespace}{sha256(key.encode('utf-8')).hexdigest()}",
+                    pickle.dumps(value),
+                ),
                 data.items(),
             ),
             **kwargs,
         )
 
     async def delete(self, *keys: typing.Sequence[str]) -> str:
-        """Remove a key and its associated value from a storage."""
+        """Remove keys and its associated value from a storage."""
         return await self.backend.delete(
             *map(
                 lambda key: f"{self.namespace}{sha256(key.encode('utf-8')).hexdigest()}",
