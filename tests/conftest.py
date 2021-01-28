@@ -10,7 +10,7 @@ from pathlib import Path
 from functools import partial
 from string import ascii_letters, printable
 
-from aioredis import RedisConnection, create_redis_pool
+from aioredis import Redis, create_redis_pool
 from asynctempfile import NamedTemporaryFile
 
 from fastapi import FastAPI
@@ -72,7 +72,7 @@ async def fs_backend(
 @pytest.fixture(scope="function")
 async def redis_connection(
     event_loop: asyncio.AbstractEventLoop,
-) -> typing.Generator[RedisConnection, None, None]:
+) -> typing.Generator[Redis, None, None]:
     """Open a connection to Redis database."""
     connection = await create_redis_pool(
         "redis://localhost:6379/1",
@@ -85,7 +85,7 @@ async def redis_connection(
 
 @pytest.fixture(scope="function")
 async def redis_backend(
-    redis_connection: RedisConnection,
+    redis_connection: Redis,
     session_id: UUID,
     event_loop: asyncio.AbstractEventLoop,
 ) -> typing.Generator[RedisBackend, None, None]:
@@ -99,15 +99,15 @@ async def redis_backend(
 @pytest.fixture(scope="function")
 async def fs_session(
     session_id: UUID,
+    session_source: NamedTemporaryFile,
     event_loop: asyncio.AbstractEventLoop,
-    redis_connection: RedisConnection,
 ) -> typing.Generator[AsyncSession, None, None]:
     backend = await AsyncSession.create(
-        FS_BACKEND_TYPE,
-        secrets.token_urlsafe(32),
-        session_id,
+        secret_key=secrets.token_urlsafe(32),
+        session_id=session_id,
+        backend=FS_BACKEND_TYPE,
         backend_kwargs={
-            "adapter": redis_connection,
+            "adapter": session_source.name.split("/").pop(),
         },
         loop=event_loop,
     )
@@ -119,12 +119,12 @@ async def fs_session(
 async def redis_session(
     session_id: UUID,
     event_loop: asyncio.AbstractEventLoop,
-    redis_connection: RedisConnection,
+    redis_connection: Redis,
 ) -> typing.Generator[AsyncSession, None, None]:
     yield await AsyncSession.create(
-        REDIS_BACKEND_TYPE,
-        secrets.token_urlsafe(32),
-        session_id,
+        secret_key=secrets.token_urlsafe(32),
+        session_id=session_id,
+        backend=REDIS_BACKEND_TYPE,
         backend_kwargs={
             "adapter": redis_connection,
         },
