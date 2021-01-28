@@ -40,9 +40,9 @@ class SessionManager:
         """A factory method for loading a session storage."""
         session_id: str = await self._session_id_loader(cookie)
         return await AsyncSession.create(
-            self._settings.SESSION_BACKEND,
-            self._secret_key,
-            session_id,
+            secret_key=self._secret_key,
+            session_id=session_id,
+            backend=self._settings.SESSION_BACKEND,
             backend_kwargs={
                 # If this is a filesystem backend
                 # then a session id will be used
