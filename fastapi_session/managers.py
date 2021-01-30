@@ -3,12 +3,14 @@ import typing
 from base64 import b64decode, b64encode
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
+from typing import Hashable
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Request, Response
 from itsdangerous import TimestampSigner
 
 from .session import AsyncSession
 from .settings import SessionSettings, get_session_settings
+from .types import Connection
 
 
 class SessionManager:
@@ -16,29 +18,33 @@ class SessionManager:
 
     def __init__(
         self,
-        secret_key: str,
+        secret_key: typing.Hashable,
         settings: typing.Type[SessionSettings],
-        session_id_loader: typing.Awaitable,
-        backend_adapter: typing.Any = None,
+        on_missing_session: typing.Callable[[Request], typing.Awaitable],
+        backend_adapter: typing.Optional[Connection] = None,
         loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     ):
         """
-        :param secret_key: A session secret key for signing a session cookie
-        :param session_id_loader: A function(coroutine) for loading session_data
-        :param backend_type: A type of backend for managing a session storage
+        :param Hashable secret_key: A session secret key for signing a session cookie
+        :param SessionSettings settings: A session settings for the session manager
+        :param Callable on_missing_session: A callable for runnning a user defined behaviour in case of missing a session in the incomming request
+        :param Connection backend_adapter: A type of backend for managing a session storage
+        :param AbstractEventLoop loop: A running event loop
         """
-        # Session storage settings
         self._secret_key = secret_key
         self._settings = settings
         self._backend_adapter = backend_adapter
-        # Delegators for managing a session id on a developer side
-        self._session_id_loader = session_id_loader
-        # A running event loop
+        self._on_missing_session = on_missing_session
         self._loop = loop
 
-    async def load_session(self, cookie: str) -> AsyncSession:
-        """A factory method for loading a session storage."""
-        session_id: str = await self._session_id_loader(cookie)
+    async def __call__(self, request: Request) -> AsyncSession:
+        """Try to load a user session from the incoming request."""
+        if "session" not in request:
+            await self._on_missing_session(request)
+        return request.session
+
+    async def load_session(self, session_id: Hashable) -> AsyncSession:
+        """Initialize a session storage for a user session."""
         return await AsyncSession.create(
             secret_key=self._secret_key,
             session_id=session_id,
@@ -59,11 +65,11 @@ class SessionManager:
         """Cookie security signer."""
         return TimestampSigner(str(self._secret_key))
 
-    def has_session(self, request: Request) -> bool:
+    def has_session_cookie(self, request: Request) -> bool:
         """Check whether a session cookie exist in the request."""
         return self._settings.SESSION_COOKIE in request.cookies
 
-    def get_session(
+    def get_session_cookie(
         self, request: Request, **options: typing.Mapping[str, typing.Any]
     ) -> str:
         """Get a session cookie from the request."""
@@ -119,17 +125,18 @@ class SessionManager:
 
 
 @lru_cache
-def get_session_manager(
-    secret_key: str,
-    session_id_loader: typing.Awaitable,
+def create_session_manager(
+    secret_key: typing.Hashable,
+    on_missing_session: typing.Callable[[Request], typing.Awaitable],
     settings: typing.Optional[typing.Type[SessionSettings]] = None,
-    backend_adapter_loader: typing.Optional[typing.Awaitable] = None,
+    backend_adapter: typing.Optional[Connection] = None,
     loop: typing.Optional[asyncio.AbstractEventLoop] = None,
 ) -> SessionManager:
     """A factory method for making a session manager."""
     return SessionManager(
         secret_key=secret_key,
         settings=settings or get_session_settings(),
-        session_id_loader=session_id_loader,
-        backend_adapter_loader=backend_adapter_loader,
+        backend_adapter=backend_adapter,
+        on_missing_session=on_missing_session,
+        loop=loop,
     )
