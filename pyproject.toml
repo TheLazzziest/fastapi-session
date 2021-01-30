@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fastapi-session"
-version = "0.5.5"
+version = "0.6.5"
 description = "A fastapi library for managing session of different types"
 authors = ["Maxim Yakovenko <mxyakovenko9@gmail.com>", "Zarlo <5899@zarlo.dev>"]
 license = "MIT"
