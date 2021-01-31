@@ -102,7 +102,7 @@ class SessionManager:
             path=options.get("path", self._settings.COOKIE_PATH),
             domain=options.get("domain", self._settings.COOKIE_DOMAIN),
             secure=options.get("secure", self._settings.COOKIE_SECURE),
-            httponly=options.get("httponly", self._settings.COOKEIE_HTTP_ONLY),
+            httponly=options.get("httponly", self._settings.COOKIE_HTTP_ONLY),
             samesite=options.get("samesite", self._settings.COOKIE_SAME_SITE),
         )
         return response
