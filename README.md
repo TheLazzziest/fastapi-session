@@ -2,6 +2,10 @@
 
 An opinionated fastapi session manager with multiple backends
 
+**Notice**:
+
+*Please, keep in mind that this library is still under heavy development. So changes of **any type** may happend. The [main](https://github.com/TheLazzziest/fastapi_session) branch is almost always stable. However, it is better to stick with release tags in order to mitigate error catching. Covering the project with tests takes one of the first places during development. However, it is not much time to test more thoroughly, so, please, be patient if something doesn't work properly or you faced with the outdated documentation or examples. BTW, new issues and pull requests are always welcome :)*
+
 ## Requirements
 
 * [Python](https://docs.python.org/3.7/tutorial/) >= 3.7
@@ -18,17 +22,17 @@ An opinionated fastapi session manager with multiple backends
 
 ## Supported backends
 
-| Backend                                          | Support |
-| ------------------------------------------------ | ------- |
-| [filesystem](https://github.com/Tinche/aiofiles) | yes     |
-| [database](#database)                            | No      |
-| [redis](https://github.com/aio-libs/aioredis)    | Yes     |
+| Backend                                                          | Support |
+| ---------------------------------------------------------------- | ------- |
+| [filesystem + portalocker](https://github.com/WoLpH/portalocker) | yes     |
+| [database](#database)                                            | No      |
+| [redis](https://github.com/aio-libs/aioredis)                    | Yes     |
 
 ## Installation
 
 Install the package with [poetry](https://python-poetry.org/):
 ```sh
-$ poetry add fastapi_session
+$ poetry add git+ssh://git@github.com:TheLazzziest/fastapi_session.git@0.6.5
 ```
 
 ## Usage
@@ -37,7 +41,6 @@ It's provided with some [examples](./examples) of the library usage using:
 
 * [redis](./examples/redis)
 * [filesystem](./examples/filesystem)
-* [memory](#memory)
 * [database](#database)
 
 ## Sources
