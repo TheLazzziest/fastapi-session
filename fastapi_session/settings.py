@@ -14,16 +14,13 @@ class SessionSettings(BaseSettings):
     SESSION_BACKEND: typing.Optional[str] = FS_BACKEND_TYPE
     # Cookie settings
     SESSION_COOKIE: typing.Optional[str] = "FAPISESSID"
-    MAX_AGE: typing.Optional[int] = None
-    EXPIRES: typing.Optional[int] = None
-    DOMAIN: typing.Optional[str] = None
-    PATH: typing.Optional[str] = "/"
-    SECURE: typing.Optional[bool] = False
-    HTTP_ONLY: typing.Optional[bool] = False
-    SAME_SITE: typing.Optional[str] = "lax"  # Only for a first-party
-
-    class Config:
-        env_prefix = "fapi_"
+    COOKIE_MAX_AGE: typing.Optional[int] = None
+    COOKIE_EXPIRES: typing.Optional[int] = None
+    COOKIE_DOMAIN: typing.Optional[str] = None
+    COOKIE_PATH: typing.Optional[str] = "/"
+    COOKIE_SECURE: typing.Optional[bool] = False
+    COOKIE_HTTP_ONLY: typing.Optional[bool] = False
+    COOKIE_SAME_SITE: typing.Optional[str] = "lax"  # Only for a first-party
 
 
 @lru_cache
