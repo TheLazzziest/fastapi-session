@@ -24,7 +24,7 @@ async def test_handling_valid_cookie(
     Check that a session middleware handles a request with a valid cookie
     """
 
-    on_valid_cookie_mock = AsyncMock(return_value=session_id)
+    on_load_cookie_mock = AsyncMock(return_value=session_id)
     secret_key = secrets.token_urlsafe(32)
     manager = SessionManager(
         secret_key=secret_key,
@@ -36,7 +36,7 @@ async def test_handling_valid_cookie(
     app.add_middleware(
         SessionMiddleware,
         manager=manager,
-        on_load_cookie=on_valid_cookie_mock,
+        on_load_cookie=on_load_cookie_mock,
         on_invalid_cookie=AsyncMock(
             return_value=Response(status_code=status.HTTP_400_BAD_REQUEST)
         ),
@@ -50,7 +50,7 @@ async def test_handling_valid_cookie(
                 ).decode("utf-8")
             },
         )
-        assert on_valid_cookie_mock.called is True
+        assert on_load_cookie_mock.called is True
 
 
 @pytest.mark.asyncio
