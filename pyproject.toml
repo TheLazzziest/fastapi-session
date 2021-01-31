@@ -35,6 +35,7 @@ databases = {extras = ["sqlite"], version = "^0.4.1"}
 uvicorn = "^0.13.3"
 httpx = "^0.16.1"
 pytest-mock = "^3.5.1"
+requests = "^2.25.1"
 
 [tool.poetry.urls]
 issues = "https://github.com/TheLazzziest/fastapi_session"
