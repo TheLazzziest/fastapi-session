@@ -77,7 +77,7 @@ class SessionManager:
             request.cookies[self._settings.SESSION_COOKIE].encode("utf-8")
         )
         return self.signer.unsign(
-            signed_id, max_age=options.get("max_age", self._settings.MAX_AGE)
+            signed_id, max_age=options.get("max_age", self._settings.COOKIE_MAX_AGE)
         ).decode("utf-8")
 
     def open_session(
@@ -97,13 +97,13 @@ class SessionManager:
         response.set_cookie(
             self._settings.SESSION_COOKIE,
             b64encode(signed_id).decode("utf-8"),
-            max_age=options.get("max_age", self._settings.MAX_AGE),
-            expires=options.get("expires", self._settings.EXPIRES),
-            path=options.get("path", self._settings.PATH),
-            domain=options.get("domain", self._settings.DOMAIN),
-            secure=options.get("secure", self._settings.SECURE),
-            httponly=options.get("httponly", self._settings.HTTP_ONLY),
-            samesite=options.get("samesite", self._settings.SAME_SITE),
+            max_age=options.get("max_age", self._settings.COOKIE_MAX_AGE),
+            expires=options.get("expires", self._settings.COOKIE_EXPIRES),
+            path=options.get("path", self._settings.COOKIE_PATH),
+            domain=options.get("domain", self._settings.COOKIE_DOMAIN),
+            secure=options.get("secure", self._settings.COOKIE_SECURE),
+            httponly=options.get("httponly", self._settings.COOKEIE_HTTP_ONLY),
+            samesite=options.get("samesite", self._settings.COOKIE_SAME_SITE),
         )
         return response
 
@@ -118,8 +118,8 @@ class SessionManager:
         """
         response.delete_cookie(
             self._settings.SESSION_COOKIE,
-            path=options.get("path", self._settings.PATH),
-            domain=options.get("domain", self._settings.DOMAIN),
+            path=options.get("path", self._settings.COOKIE_PATH),
+            domain=options.get("domain", self._settings.COOKIE_DOMAIN),
         )
         return response
 
