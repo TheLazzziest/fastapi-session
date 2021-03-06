@@ -5,32 +5,68 @@ import pytest
 import secrets
 import string
 import typing
+from hashlib import sha256
+from datetime import timedelta
 from uuid import uuid4, UUID
 from pathlib import Path
 from functools import partial
 from string import ascii_letters, printable
 
+import pendulum
 from aioredis import Redis, create_redis_pool
 from asynctempfile import NamedTemporaryFile
-
+from cryptography.fernet import Fernet
 from fastapi import FastAPI
 from fastapi_session import (
+    AES_SIV_Encryptor,
     AsyncSession,
+    create_backend,
+    create_namespace,
     FS_BACKEND_TYPE,
     FSBackend,
+    encrypt_session,
+    get_session_settings,
     REDIS_BACKEND_TYPE,
     RedisBackend,
     SessionSettings,
-    get_session_settings,
 )
 
 from .factories import generate_session_data
 
 
 @pytest.fixture(scope="session")
+def secret() -> str:
+    return "3xmPiROFJO2Kj4lu-UNQ5ap-5XsxOyv1LGep2xTp1L8="
+
+
+@pytest.fixture(scope="session")
 def session_id() -> str:
     """Generate session id for a backend."""
-    return str(uuid4())
+    return "6428b4c1-c360-4605-9318-ed99371b7bd6"
+
+
+@pytest.fixture(scope="session")
+def signer(secret: str) -> typing.Type[Fernet]:
+    return Fernet(secret.encode("utf-8"))
+
+
+@pytest.fixture(scope="session")
+def salt(secret: str) -> str:
+    """A PBKDF salt."""
+    return sha256(secret.encode("utf-8")).hexdigest()
+
+
+@pytest.fixture(scope="session")
+def encryptor(secret: str, salt: str) -> AES_SIV_Encryptor:
+    return AES_SIV_Encryptor(secret, salt)
+
+
+@pytest.fixture(scope="session")
+def token(session_id: str, signer: typing.Type[Fernet]) -> bytes:
+    """Generate an encrypted token based on a session id."""
+    return encrypt_session(
+        signer, session_id, pendulum.now().subtract(minutes=10)
+    )  # token is expired in 10 minutes
 
 
 @pytest.fixture(scope="function")
@@ -41,7 +77,7 @@ async def session_data() -> typing.Dict[str, typing.Any]:
 
 @pytest.fixture(scope="function")
 def settings() -> SessionSettings:
-    yield get_session_settings()
+    return get_session_settings()
 
 
 @pytest.fixture(scope="function")
@@ -98,17 +134,20 @@ async def redis_backend(
 
 @pytest.fixture(scope="function")
 async def fs_session(
-    session_id: UUID,
+    session_id: typing.Hashable,
+    settings: SessionSettings,
+    encryptor: AES_SIV_Encryptor,
     session_source: NamedTemporaryFile,
     event_loop: asyncio.AbstractEventLoop,
 ) -> typing.Generator[AsyncSession, None, None]:
     session = await AsyncSession.create(
-        secret_key=secrets.token_urlsafe(32),
-        session_id=session_id,
-        backend=FS_BACKEND_TYPE,
-        backend_kwargs={
-            "adapter": session_source.name.split("/").pop(),
-        },
+        encryptor=encryptor,
+        namespace=create_namespace(encryptor=encryptor, session_id=session_id),
+        backend=await create_backend(
+            FS_BACKEND_TYPE,
+            adapter=session_source.name.split("/").pop(),
+            loop=event_loop,
+        ),
         loop=event_loop,
     )
     yield session
@@ -117,17 +156,18 @@ async def fs_session(
 
 @pytest.fixture(scope="function")
 async def redis_session(
-    session_id: UUID,
+    session_id: typing.Hashable,
+    settings: SessionSettings,
+    encryptor: AES_SIV_Encryptor,
     event_loop: asyncio.AbstractEventLoop,
     redis_connection: Redis,
 ) -> typing.Generator[AsyncSession, None, None]:
     session = await AsyncSession.create(
-        secret_key=secrets.token_urlsafe(32),
-        session_id=session_id,
-        backend=REDIS_BACKEND_TYPE,
-        backend_kwargs={
-            "adapter": redis_connection,
-        },
+        encryptor=encryptor,
+        namespace=create_namespace(encryptor=encryptor, session_id=session_id),
+        backend=await create_backend(
+            REDIS_BACKEND_TYPE, adapter=redis_connection, loop=event_loop
+        ),
         loop=event_loop,
     )
     yield session
