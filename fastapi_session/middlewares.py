@@ -1,9 +1,8 @@
 import json
 import typing
 
-from fastapi import FastAPI, Request, Response, HTTPException, status
-from itsdangerous.exc import BadTimeSignature, SignatureExpired, BadSignature
-
+from cryptography.fernet import InvalidToken
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from starlette.types import Receive, Scope, Send
 
 from .managers import SessionManager
@@ -37,7 +36,7 @@ class SessionMiddleware:
         """
         self.app = app
         self.manager = manager
-        # A set of user callbacks for
+        # A set of user callbacks for handling different request processing scenarious
         self.on_load_cookie = on_load_cookie
         self.on_invalid_cookie = on_invalid_cookie
         self.on_undefined_error = on_undefined_error
@@ -58,7 +57,7 @@ class SessionMiddleware:
                     request, self.manager.get_session_cookie(request)
                 )
             )
-        except (BadSignature, BadTimeSignature, SignatureExpired) as exc:
+        except InvalidToken as exc:
             if not self.on_invalid_cookie:
                 return await self.app(scope, receive, send)
             response: Response = await self.on_invalid_cookie(request, exc)
