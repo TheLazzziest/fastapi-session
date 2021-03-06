@@ -149,7 +149,6 @@ class SessionManager:
         return response
 
 
-@lru_cache
 def create_session_manager(
     secret: str,
     signer: typing.Type[Fernet],
