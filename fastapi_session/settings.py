@@ -2,7 +2,7 @@
 import typing
 from functools import lru_cache
 
-from pydantic import BaseSettings
+from pydantic import BaseSettings, validator
 
 from .constants import FS_BACKEND_TYPE
 
@@ -13,14 +13,15 @@ class SessionSettings(BaseSettings):
     # Session settings
     SESSION_BACKEND: typing.Optional[str] = FS_BACKEND_TYPE
     # Cookie settings
-    SESSION_COOKIE: typing.Optional[str] = "FAPISESSID"
-    COOKIE_MAX_AGE: typing.Optional[int] = None
-    COOKIE_EXPIRES: typing.Optional[int] = None
-    COOKIE_DOMAIN: typing.Optional[str] = None
-    COOKIE_PATH: typing.Optional[str] = "/"
-    COOKIE_SECURE: typing.Optional[bool] = False
-    COOKIE_HTTP_ONLY: typing.Optional[bool] = False
-    COOKIE_SAME_SITE: typing.Optional[str] = "lax"  # Only for a first-party
+    COOKIE_NAME: typing.Optional[str] = "FAPISESSID"
+    EXPIRES: typing.Optional[int] = None
+    DOMAIN: typing.Optional[str] = None
+    HTTP_ONLY: typing.Optional[bool] = False
+    #  If both EXPIRES and MAX_AGE are set, MAX_AGE has precedence.
+    MAX_AGE: typing.Optional[int] = None
+    PATH: typing.Optional[str] = "/"
+    SAME_SITE: typing.Optional[str] = "lax"  # Only for a first-party
+    SECURE: typing.Optional[bool] = False
 
 
 @lru_cache
