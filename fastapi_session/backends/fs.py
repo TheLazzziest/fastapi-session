@@ -10,14 +10,14 @@ from pathlib import Path
 
 
 from ._mixins import FileStorageMixin, DisableMethodsMixin
-from .interfaces import BackendInterface
+from .interfaces import BackendInterface, FactoryInterface
 
 
 __all__ = ("FSBackend",)
 
 
 @dataclass(order=False, eq=False, repr=False)
-class FSBackend(FileStorageMixin, DisableMethodsMixin, BackendInterface):
+class FSBackend(FileStorageMixin, DisableMethodsMixin, FactoryInterface, BackendInterface):
     """
     A backend for managing filesystem based session storage.
     """
@@ -28,11 +28,12 @@ class FSBackend(FileStorageMixin, DisableMethodsMixin, BackendInterface):
     @classmethod
     async def create(
         cls,
-        adapter: typing.Optional[typing.Any] = None,
+        adapter: str,
         loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     ) -> "FSBackend":
         """A factory method for creating and initializing the backend.
-        :param adatper: A path to the user session file
+
+        :param adatper: A path to a user session file
         :param loop: A running event loop
         """
         self = cls(adapter, loop)
