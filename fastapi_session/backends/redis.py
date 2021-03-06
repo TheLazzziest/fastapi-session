@@ -1,9 +1,9 @@
 import asyncio
 import pickle
 import typing
-from itertools import chain
 from aioredis import RedisConnection
 from dataclasses import dataclass, field
+from itertools import chain
 
 from ._mixins import DisableMethodsMixin
 from .interfaces import BackendInterface, FactoryInterface
@@ -16,11 +16,6 @@ __all__ = ("RedisBackend",)
 class RedisBackend(DisableMethodsMixin, FactoryInterface, BackendInterface):
     """
     A backend for managing redis based session storage.
-
-    @TODO: Implement async generator
-    :param ns: A namespace for storing user data
-    :param adapter: An instance of an opened connection to Redis server
-    :param loop: An instance of event loop
     """
 
     adapter: RedisConnection
@@ -35,7 +30,6 @@ class RedisBackend(DisableMethodsMixin, FactoryInterface, BackendInterface):
         """
         A factory method for creating and initializing the backend.
 
-        :param ns: A redis key namespace
         :param adapter: An opened connection to a redis server
         :param loop: An instance of event loop
         """
@@ -47,7 +41,7 @@ class RedisBackend(DisableMethodsMixin, FactoryInterface, BackendInterface):
             await self.adapter.delete(*keys)
 
     async def keys(self, pattern: str) -> typing.List[str]:
-        return await self.adapter.keys(pattern)
+        return await self.adapter.keys(f"{pattern}*")
 
     async def exists(self, *key: typing.Sequence[str]) -> int:
         return await self.adapter.exists(*key)
