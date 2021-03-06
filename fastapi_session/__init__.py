@@ -2,6 +2,7 @@ import asyncio
 import typing
 
 from fastapi import FastAPI, Request, Response
+from cryptography.fernet import Fernet
 
 from .backends import (
     BackendInterface,
@@ -11,24 +12,42 @@ from .backends import (
 )
 from .constants import FS_BACKEND_TYPE, DATABASE_BACKEND_TYPE, REDIS_BACKEND_TYPE
 from .dependencies import get_session_manager, get_user_session
+from .encryptors import EncryptorInterface, AES_SIV_Encryptor
+from .exceptions import BackendImportError
 from .managers import SessionManager, create_session_manager
 from .middlewares import SessionMiddleware
-from .session import AsyncSession
+from .sessions import AsyncSession
 from .settings import get_session_settings, SessionSettings
 from .types import Connection
+from .utils import (
+    create_backend,
+    create_namespace,
+    decrypt_session,
+    encrypt_session,
+    import_backend,
+)
 
 __all__ = (
+    AES_SIV_Encryptor,
+    AsyncSession,
     BackendInterface,
+    BackendImportError,
     "connect",
     Connection,
+    create_backend,
+    create_namespace,
     create_session_manager,
-    DBBackend,
     DATABASE_BACKEND_TYPE,
+    DBBackend,
+    decrypt_session,
+    encrypt_session,
+    EncryptorInterface,
     FSBackend,
     FS_BACKEND_TYPE,
     get_session_manager,
     get_session_settings,
     get_user_session,
+    import_backend,
     RedisBackend,
     REDIS_BACKEND_TYPE,
     SessionManager,
@@ -39,7 +58,8 @@ __all__ = (
 
 def connect(
     app: FastAPI,
-    secret_key: typing.Hashable,
+    secret: str,
+    signer: typing.Type[Fernet],
     on_load_cookie: typing.Callable[[Request, str], typing.Awaitable[str]],
     on_missing_session: typing.Callable[[Request], typing.Awaitable],
     settings: typing.Optional[typing.Type[SessionSettings]] = None,
@@ -68,9 +88,10 @@ def connect(
 
     @app.on_event("startup")
     async def on_startup():
-        app.state.session = SessionManager(
-            secret_key,
-            settings=settings or get_session_settings(),
+        app.state.session = create_session_manager(
+            secret=secret,
+            signer=signer,
+            settings=settings,
             backend_adapter=(
                 backend_adapter_loader(app) if backend_adapter_loader else None
             ),
