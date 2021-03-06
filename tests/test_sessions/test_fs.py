@@ -13,4 +13,4 @@ from fastapi_session import (
 
 @pytest.mark.asyncio
 async def test_create_fs_backend(fs_session: AsyncSession):
-    assert isinstance(fs_session.backend, FSBackend)
+    assert isinstance(fs_session._backend, FSBackend)
