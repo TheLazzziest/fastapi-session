@@ -1,6 +1,6 @@
 from fastapi import Request, Depends
 
-from .session import AsyncSession
+from .sessions import AsyncSession
 from .managers import SessionManager
 
 
