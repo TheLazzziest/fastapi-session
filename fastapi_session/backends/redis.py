@@ -36,12 +36,12 @@ class RedisBackend(DisableMethodsMixin, FactoryInterface, BackendInterface):
         return cls(adapter, loop)
 
     async def clear(self, pattern: str) -> None:
-        keys = await self.adapter.keys(pattern)
+        keys = await self.keys(pattern)
         if len(keys) > 0:
             await self.adapter.delete(*keys)
 
     async def keys(self, pattern: str) -> typing.List[str]:
-        return await self.adapter.keys(f"{pattern}*")
+        return await self.adapter.keys(f"{pattern}:*")
 
     async def exists(self, *key: typing.Sequence[str]) -> int:
         return await self.adapter.exists(*key)
