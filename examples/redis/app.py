@@ -1,13 +1,15 @@
 import logging
 import typing
 import json
+from base64 import b64encode
 from hashlib import sha256
-from uuid import uuid4
 from typing import Any, List
 
 
 from aioredis import create_redis_pool, RedisConnection
-from itsdangerous.exc import BadTimeSignature, SignatureExpired
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import Depends, FastAPI, Request, Response, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi_session import (
@@ -25,12 +27,13 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 settings = SessionSettings()
-secret_key = "aYhzAqkFsyB9ZWlrYaeu8258TqQYdo2_u6MWDVr0HTs"
+secret_key = "2BCuqD_9qwuq4zXMdVPWfWwrLgdrET_OymqiS_Ubo_o"
+salt = sha256(secret_key.encode("utf-8")).hexdigest().encode("utf-8")
 
 
 async def session_id_generator(app: FastAPI) -> str:
     """A delegate for generating of a session id."""
-    return sha256(f"{secret_key}:{uuid4()}".encode("utf-8")).hexdigest()
+    return sha256("4bf9c729-ca23-4898-b314-db8f5c41607c".encode("utf-8")).hexdigest()
 
 
 async def on_missing_session(request: Request) -> None:
@@ -42,11 +45,9 @@ async def on_load_cookie(request: Request, cookie: str) -> str:
     return cookie
 
 
-async def on_invalid_cookie(
-    request: Request, exc: typing.Union[BadTimeSignature, SignatureExpired]
-) -> Response:
+async def on_invalid_cookie(request: Request, exc: InvalidToken) -> Response:
     response = Response(status_code=status.HTTP_401_UNAUTHORIZED)
-    response.delete_cookie(settings.SESSION_COOKIE)
+    response.delete_cookie(settings.COOKIE_NAME)
     return response
 
 
@@ -69,8 +70,18 @@ async def close_session():
 
 connect(
     app=app,
+    secret=secret_key,
+    signer=Fernet(
+        b64encode(
+            PBKDF2HMAC(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=salt,
+                iterations=100,
+            ).derive(secret_key.encode("utf-8"))
+        )
+    ),
     settings=settings,
-    secret_key=secret_key,
     backend_adapter_loader=on_load_backend_adapter,
     on_load_cookie=on_load_cookie,
     on_invalid_cookie=on_invalid_cookie,
