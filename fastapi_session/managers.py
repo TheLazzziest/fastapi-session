@@ -121,7 +121,7 @@ class SessionManager:
             encrypt_session(self._signer, session_id, timestamp),
             max_age=options.get("max_age", self._settings.MAX_AGE),
             expires=options.get("expires", self._settings.EXPIRES),
-            path=options.get("path", self._settings.PATH),
+            path=options.get("path", self._settings.COOKIE_PATH),
             domain=options.get("domain", self._settings.DOMAIN),
             secure=options.get("secure", self._settings.SECURE),
             httponly=options.get("httponly", self._settings.HTTP_ONLY),
@@ -143,7 +143,7 @@ class SessionManager:
         """
         response.delete_cookie(
             self._settings.COOKIE_NAME,
-            path=path or self._settings.PATH,
+            path=path or self._settings.COOKIE_PATH,
             domain=domain or self._settings.DOMAIN,
         )
         return response
