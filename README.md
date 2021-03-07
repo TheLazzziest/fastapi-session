@@ -39,12 +39,37 @@ $ poetry add git+ssh://git@github.com:TheLazzziest/fastapi_session.git#0.6.6
 
 ## Startup
 
-### Create a fernet token
+### Create a fernet token (signer)
+
+```python
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+...
+secret = "fastsession"
+signer = Fernet(
+    b64encode(
+        PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100,
+        ).derive(secret_key.encode("utf-8"))
+    )
+)
+```
 
 ### Connect the session to an app
 
 ```python
-
+connect(
+    app=app,
+    secret=secret,
+    signer=signer,
+    on_load_cookie=user_defined_callable_for_processing_a_cookie_token,
+    on_missing_session=user_defined_callable_for_handling_errors,
+)
 ```
 
 ## Examples
