@@ -138,7 +138,7 @@ class AsyncSession(AsyncFileSessionMixin):
         """Remove keys and its associated value from a storage."""
         return await self._backend.delete(
             *map(
-                lambda key: f"{self._namespace}:{self._signer.encrypt(key)}",
+                lambda key: f"{self._namespace}:{self._encryptor.encrypt(key)}",
                 keys,
             )
         )
