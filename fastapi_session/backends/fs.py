@@ -17,7 +17,9 @@ __all__ = ("FSBackend",)
 
 
 @dataclass(order=False, eq=False, repr=False)
-class FSBackend(FileStorageMixin, DisableMethodsMixin, FactoryInterface, BackendInterface):
+class FSBackend(
+    FileStorageMixin, DisableMethodsMixin, FactoryInterface, BackendInterface
+):
     """
     A backend for managing filesystem based session storage.
     """
