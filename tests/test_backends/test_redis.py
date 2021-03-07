@@ -13,8 +13,7 @@ async def test_get_by_key_under_namespace(
     """Check whether a key is under a namespace."""
     key, value = f"{session_id}:fastapi_session", "cool"
     await redis_backend.set(key, value)
-    keys = [key.decode("utf-8") for key in await redis_backend.keys(f"{session_id}*")]
-    assert key in keys
+    assert key in await redis_backend.keys(session_id)
 
 
 @pytest.mark.asyncio
@@ -24,8 +23,7 @@ async def test_set_by_key_under_namespace(
     """Check that a value is to be set for a key under a namespace."""
     key, value = f"{session_id}:fastapi_session", "fast"
     await redis_backend.set(key, value)
-    values = [value.decode("utf-8") for value in await redis_backend.get(key)]
-    assert value in values
+    assert value in await redis_backend.get(key)
 
 
 @pytest.mark.asyncio
@@ -63,8 +61,8 @@ async def test_bulk_update(
     # Validate that all entries have been applied
     RAW_KEY_INDEX_PART = 1
     raw_backend_saved_keys = [
-        key.decode("utf-8").split(f"{session_id}:").pop()
-        for key in await redis_backend.keys(f"{session_id}*")
+        key.split(f"{session_id}:").pop()
+        for key in await redis_backend.keys(session_id)
     ]
     assert (set(backend_data_key_subset) - set(raw_backend_saved_keys)) == set()
 
