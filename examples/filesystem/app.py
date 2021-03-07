@@ -1,15 +1,20 @@
 import logging
 import typing
 import json
+from base64 import b64encode
 from hashlib import sha256
 from typing import Any, List
-from uuid import uuid4
 
-from itsdangerous.exc import BadTimeSignature, SignatureExpired
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import Depends, FastAPI, Request, Response, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi_session import (
+    AsyncSession,
     connect,
+    get_session_manager,
+    get_user_session,
     SessionManager,
     SessionSettings,
     SessionMiddleware,
@@ -18,13 +23,14 @@ from fastapi_session import (
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-secret_key = "2BCuqD_9qwuq4zXMdVPWfWwrLgdrET_OymqiS_Ubo_o"
 settings = SessionSettings()
+secret_key = "2BCuqD_9qwuq4zXMdVPWfWwrLgdrET_OymqiS_Ubo_o"
+salt = sha256(secret_key.encode("utf-8")).hexdigest().encode("utf-8")
 
 
 async def session_id_generator(app: FastAPI) -> str:
     """A delegate for generating of a session id."""
-    return sha256(f"{secret_key}:{uuid4()}".encode("utf-8")).hexdigest()
+    return sha256("4bf9c729-ca23-4898-b314-db8f5c41607c".encode("utf-8")).hexdigest()
 
 
 async def on_missing_session(request: Request) -> None:
@@ -36,18 +42,25 @@ async def on_load_cookie(request: Request, cookie: str) -> str:
     return cookie
 
 
-async def on_invalid_cookie(
-    request: Request, exc: typing.Union[BadTimeSignature, SignatureExpired]
-) -> Response:
+async def on_invalid_cookie(request: Request, exc: InvalidToken) -> Response:
     response = Response(status_code=status.HTTP_401_UNAUTHORIZED)
-    response.delete_cookie(settings.SESSION_COOKIE)
+    response.delete_cookie(settings.COOKIE_NAME)
     return response
 
 
 connect(
     app=app,
-    settings=settings,
-    secret_key=secret_key,
+    secret=secret_key,
+    signer=Fernet(
+        b64encode(
+            PBKDF2HMAC(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=salt,
+                iterations=100,
+            ).derive(secret_key.encode("utf-8"))
+        )
+    ),
     on_load_cookie=on_load_cookie,
     on_invalid_cookie=on_invalid_cookie,
     on_missing_session=on_missing_session,
@@ -75,8 +88,8 @@ async def add_to_session(
     session: AsyncSession = Depends(get_user_session),
 ) -> Response:
     """Add the value to the session by the key"""
-    result = await session.set(key, value)
-    response.status_code = status.HTTP_200_OK
+    await session.set(key, value)
+    await session.save()
     return Response(status_code=status.HTTP_200_OK)
 
 
