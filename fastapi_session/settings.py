@@ -19,7 +19,7 @@ class SessionSettings(BaseSettings):
     HTTP_ONLY: typing.Optional[bool] = False
     #  If both EXPIRES and MAX_AGE are set, MAX_AGE has precedence.
     MAX_AGE: typing.Optional[int] = None
-    PATH: typing.Optional[str] = "/"
+    COOKIE_PATH: typing.Optional[str] = "/"
     SAME_SITE: typing.Optional[str] = "lax"  # Only for a first-party
     SECURE: typing.Optional[bool] = False
 
