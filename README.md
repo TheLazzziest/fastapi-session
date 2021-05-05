@@ -67,8 +67,7 @@ connect(
     app=app,
     secret=secret,
     signer=signer,
-    on_load_cookie=user_defined_callable_for_processing_a_cookie_token,
-    on_missing_session=user_defined_callable_for_handling_errors,
+    on_load_cookie=callback
 )
 ```
 
