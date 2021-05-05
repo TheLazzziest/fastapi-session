@@ -11,14 +11,15 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import Depends, FastAPI, Request, Response, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi_session import (
+    Connection,
     AsyncSession,
-    connect,
     get_session_manager,
     get_user_session,
+    MissingSessionException,
     SessionManager,
     SessionSettings,
-    SessionMiddleware,
 )
+from fastapi_session.adapters.fastapi import connect
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ async def session_id_generator(app: FastAPI) -> str:
     return sha256("4bf9c729-ca23-4898-b314-db8f5c41607c".encode("utf-8")).hexdigest()
 
 
+@app.exception_handler(MissingSessionException)
 async def on_missing_session(request: Request) -> None:
     """A delegate for restoring of a session id from the passed cookie."""
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
@@ -42,9 +44,10 @@ async def on_load_cookie(request: Request, cookie: str) -> str:
     return cookie
 
 
+@app.exception_handler(Exception)
 async def on_invalid_cookie(request: Request, exc: InvalidToken) -> Response:
     response = Response(status_code=status.HTTP_401_UNAUTHORIZED)
-    response.delete_cookie(settings.COOKIE_NAME)
+    response.unset_cookie(settings.COOKIE_NAME)
     return response
 
 
@@ -62,21 +65,19 @@ connect(
         )
     ),
     on_load_cookie=on_load_cookie,
-    on_invalid_cookie=on_invalid_cookie,
-    on_missing_session=on_missing_session,
 )
 
 
 @app.on_event("shutdown")
 async def close_session():
-    await app.state.session.save()
+    await app.session.save()
 
 
 @app.post("/init/")
 async def init_session(
     response: Response, manager: SessionManager = Depends(get_session_manager)
 ) -> Response:
-    response = manager.open_session(response, await session_id_generator(app))
+    response = manager.set_cookie(response, await session_id_generator(app))
     response.status_code = status.HTTP_200_OK
     return response
 
@@ -126,6 +127,6 @@ async def flush_session(session: AsyncSession = Depends(get_user_session)) -> Re
 async def close_session(
     response: Response, manager: SessionManager = Depends(get_session_manager)
 ) -> Response:
-    response = manager.close_session(response)
+    response = manager.unset_cookie(response)
     response.status_code = status.HTTP_200_OK
     return response
