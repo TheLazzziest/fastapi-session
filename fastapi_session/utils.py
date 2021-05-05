@@ -10,7 +10,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from .backends import BackendInterface
 from .encryptors import EncryptorInterface
-from .exceptions import BackendImportError
+from .exceptions import BackendImportException
 
 
 def import_backend(backend_path: str) -> typing.Optional[BackendInterface]:
@@ -24,7 +24,7 @@ def import_backend(backend_path: str) -> typing.Optional[BackendInterface]:
         return klass
     except (ImportError, AttributeError) as e:
         # AttributeError doesn't have msg property
-        raise BackendImportError(e.args[0]) from e
+        raise BackendImportException(detail=e.args[0]) from e
 
 
 async def create_backend(
