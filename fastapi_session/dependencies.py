@@ -6,7 +6,7 @@ from .managers import SessionManager
 
 def get_session_manager(request: Request) -> SessionManager:
     """Get a session manager as a dependency."""
-    return request.app.state.session
+    return request.app.session
 
 
 async def get_user_session(
