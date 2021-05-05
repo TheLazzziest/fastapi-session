@@ -9,6 +9,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from fastapi import Request, Response
 
 from .encryptors import AES_SIV_Encryptor
+from .exceptions import InvalidCookieException, MissingSessionException
 from .sessions import AsyncSession
 from .settings import SessionSettings, get_session_settings
 from .types import Connection
@@ -23,7 +24,7 @@ class SessionManager:
         secret: str,
         signer: typing.Type[Fernet],
         settings: typing.Type[SessionSettings],
-        on_missing_session: typing.Callable[[Request], typing.Awaitable],
+        on_load_cookie: typing.Callable[[Request, str], typing.Awaitable[str]] = None,
         backend_adapter: typing.Optional[Connection] = None,
         loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     ):
@@ -39,14 +40,14 @@ class SessionManager:
         self._signer = signer
         self._settings = settings
         self._backend_adapter = backend_adapter
-        self._on_missing_session = on_missing_session
-        self._loop = loop if loop else asyncio.get_running_loop()
+        self._on_load_cookie = on_load_cookie
+        self._loop = loop if loop is not None else asyncio.get_running_loop()
 
     async def __call__(self, request: Request) -> AsyncSession:
         """Try to load a user session from the incoming request."""
-        if "session" not in request:
-            await self._on_missing_session(request)
-        return request.session
+        if "session" not in request or request["session"] is None:
+            raise MissingSessionException(detail="A user session is missing")
+        return request["session"]
 
     @cached_property
     def encryptor(self):
@@ -54,8 +55,15 @@ class SessionManager:
             self._secret, sha256(self._secret.encode("utf-8")).hexdigest()
         )
 
-    async def load_session(self, session_id: Hashable) -> AsyncSession:
+    async def load_session(
+        self, request: Request, session_id: Hashable
+    ) -> AsyncSession:
         """Initialize a session storage for a user session."""
+        session_id = (
+            await self._on_load_cookie(request, session_id)
+            if self._on_load_cookie is not None
+            else session_id
+        )
         return await AsyncSession.create(
             encryptor=self.encryptor,
             namespace=create_namespace(
@@ -78,11 +86,11 @@ class SessionManager:
             loop=self._loop,
         )
 
-    def has_session_cookie(self, request: Request) -> bool:
+    def has_cookie(self, request: Request) -> bool:
         """Check whether a session cookie exist in the request."""
-        return self._settings.COOKIE_NAME in request.cookies
+        return self._settings.SESSION_COOKIE_NAME in request.cookies
 
-    def get_session_cookie(
+    def get_cookie(
         self, request: Request, **options: typing.Mapping[str, typing.Any]
     ) -> str:
         """Get a session cookie from the request.
@@ -91,16 +99,21 @@ class SessionManager:
         :param timestamp: a cookie signature timestamp
         :param max_age: a cookie max age param
         """
-        return decrypt_session(
-            self._signer,
-            request.cookies[self._settings.COOKIE_NAME],
-            (
-                options.get("max_age", self._settings.MAX_AGE)
-                or options.get("expires", self._settings.EXPIRES)
-            ),
-        )
+        try:
+            return decrypt_session(
+                self._signer,
+                request.cookies[self._settings.SESSION_COOKIE_NAME],
+                (
+                    options.get("max_age", self._settings.SESSION_COOKIE_MAX_AGE)
+                    or options.get("expires", self._settings.SESSION_COOKIE_EXPIRES)
+                ),
+            )
+        except InvalidToken as exc:
+            raise InvalidCookieException(
+                detail="Session token is outdated or malformed"
+            ) from exc
 
-    def open_session(
+    def set_cookie(
         self,
         response: Response,
         session_id: typing.Hashable,
@@ -117,19 +130,21 @@ class SessionManager:
         """
 
         response.set_cookie(
-            self._settings.COOKIE_NAME,
+            self._settings.SESSION_COOKIE_NAME,
             encrypt_session(self._signer, session_id, timestamp),
-            max_age=options.get("max_age", self._settings.MAX_AGE),
-            expires=options.get("expires", self._settings.EXPIRES),
-            path=options.get("path", self._settings.COOKIE_PATH),
-            domain=options.get("domain", self._settings.DOMAIN),
-            secure=options.get("secure", self._settings.SECURE),
-            httponly=options.get("httponly", self._settings.HTTP_ONLY),
-            samesite=options.get("samesite", self._settings.SAME_SITE),
+            max_age=options.get("max_age", self._settings.SESSION_COOKIE_MAX_AGE),
+            expires=options.get("expires", self._settings.SESSION_COOKIE_EXPIRES),
+            path=options.get("path", self._settings.SESSION_COOKIE_PATH),
+            domain=options.get("domain", self._settings.SESSION_COOKIE_DOMAIN),
+            secure=options.get("secure", self._settings.SESSION_COOKIE_SECURE),
+            httponly=options.get("httponly", self._settings.SESSION_COOKIE_HTTPONLY),
+            samesite=options.get(
+                "samesite", self._settings.SESSION_COOKIE_SAMESITE.value
+            ),
         )
         return response
 
-    def close_session(
+    def unset_cookie(
         self,
         response: Response,
         path: typing.Optional[str] = None,
@@ -142,9 +157,9 @@ class SessionManager:
         :return Response: A response with a removed session cookie
         """
         response.delete_cookie(
-            self._settings.COOKIE_NAME,
-            path=path or self._settings.COOKIE_PATH,
-            domain=domain or self._settings.DOMAIN,
+            self._settings.SESSION_COOKIE_NAME,
+            path=path or self._settings.SESSION_COOKIE_PATH,
+            domain=domain or self._settings.SESSION_COOKIE_DOMAIN,
         )
         return response
 
@@ -152,8 +167,8 @@ class SessionManager:
 def create_session_manager(
     secret: str,
     signer: typing.Type[Fernet],
-    on_missing_session: typing.Callable[[Request], typing.Awaitable],
     settings: typing.Optional[typing.Type[SessionSettings]] = None,
+    on_load_cookie: typing.Callable[[Request, str], typing.Awaitable[str]] = None,
     backend_adapter: typing.Optional[Connection] = None,
     loop: typing.Optional[asyncio.AbstractEventLoop] = None,
 ) -> SessionManager:
@@ -162,7 +177,7 @@ def create_session_manager(
         secret=secret,
         signer=signer,
         settings=settings or get_session_settings(),
+        on_load_cookie=on_load_cookie,
         backend_adapter=backend_adapter,
-        on_missing_session=on_missing_session,
         loop=loop,
     )
