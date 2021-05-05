@@ -24,7 +24,9 @@ class SessionManager:
         secret: str,
         signer: typing.Type[Fernet],
         settings: typing.Type[SessionSettings],
-        on_load_cookie: typing.Callable[[Request, str], typing.Awaitable[str]] = None,
+        on_load_cookie: typing.Optional[
+            typing.Callable[[Request, str], typing.Awaitable[str]]
+        ] = None,
         backend_adapter: typing.Optional[Connection] = None,
         loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     ):
@@ -32,7 +34,7 @@ class SessionManager:
         :param str secret: A session secret key for encryption
         :param Fernet signer: A fernet instance for encrypting and signing session data and a cookie
         :param SessionSettingfernets settings: A session settings for the session manager
-        :param Callable on_missing_session: A callable for runnning a user defined behaviour in case of missing a session in the incomming request
+        :param Callable on_load_cookie: A callable for post processing a session cookie
         :param Connection backend_adapter: A type of backend for managing a session storage
         :param AbstractEventLoop loop: A running event loop
         """
