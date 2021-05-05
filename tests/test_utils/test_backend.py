@@ -6,7 +6,7 @@ from fastapi_session import (
     import_backend,
     FS_BACKEND_TYPE,
     FSBackend,
-    BackendImportError,
+    BackendImportException,
 )
 
 
@@ -20,5 +20,5 @@ def test_import_backend():
     ["fastsession.backends.FS_BACKEND", "fastapi_session.backends.NonExistentBackend"],
 )
 def test_import_backend_error(backend_path: str):
-    with pytest.raises(BackendImportError):
+    with pytest.raises(BackendImportException):
         import_backend(backend_path)

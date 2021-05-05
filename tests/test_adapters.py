@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock, patch
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.testclient import TestClient
-from fastapi_session import connect, SessionManager, SessionMiddleware, SessionSettings
+from fastapi_session import SessionManager, SessionMiddleware, SessionSettings
+from fastapi_session.adapters.fastapi import connect
 from starlette.types import Receive, Scope, Send
 
 
@@ -32,9 +33,6 @@ def test_fastapi_adapter(
         secret=secret,
         signer=signer,
         on_load_cookie=AsyncMock(return_value=lambda request, cookie: cookie),
-        on_missing_session=AsyncMock(
-            side_effect=HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-        ),
     )
     app.add_api_route("/", index)
 
@@ -44,5 +42,5 @@ def test_fastapi_adapter(
             assert (
                 response.status_code is status.HTTP_200_OK
             )  # indicates that mock in SessionMiddleware has been worked
-            assert hasattr(app.state, "session") is True
-            assert isinstance(app.state.session, SessionManager)
+            assert hasattr(app, "session") is True
+            assert isinstance(app.session, SessionManager) is True

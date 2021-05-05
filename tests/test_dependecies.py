@@ -6,11 +6,13 @@ from unittest.mock import AsyncMock
 import pytest
 from cryptography.fernet import Fernet
 from fastapi import Depends, FastAPI, Request, Response, HTTPException, status
+from fastapi.responses import Response
 from fastapi_session import (
     AsyncSession,
     decrypt_session,
     encrypt_session,
     get_user_session,
+    MissingSessionException,
     SessionManager,
     SessionSettings,
     SessionMiddleware,
@@ -40,26 +42,19 @@ async def test_user_session_dependency(
         secret=secret,
         signer=signer,
         settings=settings,
-        on_missing_session=AsyncMock(
-            side_effect=HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-        ),
     )
     app.add_middleware(
         SessionMiddleware,
         manager=manager,
-        on_load_cookie=AsyncMock(return_value=session_id),
-        on_invalid_cookie=AsyncMock(
-            return_value=Response(status_code=status.HTTP_401_UNAUTHORIZED)
-        ),
     )
-    app.state.session = manager
+    app.session = manager
     app.add_api_route("/", index)
     async with AsyncClient(app=app, base_url="http://testserver") as client:
         response = await client.get(
             "/",
-            cookies={settings.COOKIE_NAME: encrypt_session(signer, session_id)},
+            cookies={settings.SESSION_COOKIE_NAME: encrypt_session(signer, session_id)},
         )
-        session = await manager.load_session(session_id)
+        session = await manager.load_session(AsyncMock(), session_id)
         assert response.status_code == status.HTTP_200_OK
         assert list(await session.get("test")).pop() == "passed"
 
@@ -80,20 +75,20 @@ async def test_missing_user_session_dependency(
         return Response(status_code=status.HTTP_200_OK)
 
     on_missing_session_mock = AsyncMock(
-        side_effect=HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        return_value=Response(status_code=status.HTTP_401_UNAUTHORIZED)
     )
     manager = SessionManager(
         secret=secret,
         signer=signer,
         settings=settings,
-        on_missing_session=on_missing_session_mock,
+        on_load_cookie=AsyncMock(return_value=secrets.token_urlsafe(8)),
     )
+    app.add_exception_handler(MissingSessionException, on_missing_session_mock)
     app.add_middleware(
         SessionMiddleware,
         manager=manager,
-        on_load_cookie=AsyncMock(return_value=secrets.token_urlsafe(8)),
     )
-    app.state.session = manager
+    app.session = manager
     app.add_api_route("/", index)
     async with AsyncClient(app=app, base_url="http://testserver") as client:
         response = await client.get(
@@ -101,7 +96,7 @@ async def test_missing_user_session_dependency(
             # Generate an invalid session cookie
             # also disable a callback for an invalid cookie
             # in order to trigger a callback on missing a user session
-            cookies={settings.COOKIE_NAME: session_id},
+            cookies={settings.SESSION_COOKIE_NAME: session_id},
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert on_missing_session_mock.called is True

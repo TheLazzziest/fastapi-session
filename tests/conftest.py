@@ -14,6 +14,7 @@ from string import ascii_letters, printable
 
 import pendulum
 from aioredis import Redis, create_redis_pool
+from asgi_lifespan import LifespanManager
 from asynctempfile import NamedTemporaryFile
 from cryptography.fernet import Fernet
 from fastapi import FastAPI
@@ -165,9 +166,7 @@ async def redis_session(
     session = await AsyncSession.create(
         encryptor=encryptor,
         namespace=create_namespace(encryptor=encryptor, session_id=session_id),
-        backend=await create_backend(
-            REDIS_BACKEND_TYPE, adapter=redis_connection, loop=event_loop
-        ),
+        backend=await create_backend(REDIS_BACKEND_TYPE, adapter=redis_connection),
         loop=event_loop,
     )
     yield session
@@ -175,5 +174,7 @@ async def redis_session(
 
 
 @pytest.fixture(scope="function")
-def app() -> typing.Generator[FastAPI, None, None]:
-    yield FastAPI()
+async def app() -> typing.Generator[FastAPI, None, None]:
+    app = FastAPI()
+    async with LifespanManager(app):
+        yield app
