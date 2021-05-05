@@ -14,7 +14,9 @@ def connect(
     app: FastAPI,
     secret: str,
     signer: typing.Type[Fernet],
-    on_load_cookie: typing.Callable[[Request, str], typing.Awaitable[str]],
+    on_load_cookie: typing.Optional[
+        typing.Callable[[Request, str], typing.Awaitable[str]]
+    ] = None,
     settings: typing.Optional[typing.Type[SessionSettings]] = None,
     backend_adapter_loader: typing.Optional[
         typing.Callable[[FastAPI], Connection]
