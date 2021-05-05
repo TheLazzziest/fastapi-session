@@ -13,15 +13,15 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import Depends, FastAPI, Request, Response, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi_session import (
-    connect,
     Connection,
     AsyncSession,
     get_session_manager,
     get_user_session,
+    MissingSessionException,
     SessionManager,
     SessionSettings,
 )
-
+from fastapi_session.adapters.fastapi import connect
 
 logger = logging.getLogger(__name__)
 
@@ -31,23 +31,25 @@ secret_key = "2BCuqD_9qwuq4zXMdVPWfWwrLgdrET_OymqiS_Ubo_o"
 salt = sha256(secret_key.encode("utf-8")).hexdigest().encode("utf-8")
 
 
-async def session_id_generator(app: FastAPI) -> str:
+def session_id_generator(app: FastAPI) -> str:
     """A delegate for generating of a session id."""
     return sha256("4bf9c729-ca23-4898-b314-db8f5c41607c".encode("utf-8")).hexdigest()
 
 
-async def on_missing_session(request: Request) -> None:
+@app.exception_handler(MissingSessionException)
+async def on_missing_session(request: Request, exc: MissingSessionException) -> None:
     """A delegate for restoring of a session id from the passed cookie."""
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED) from exc
 
 
 async def on_load_cookie(request: Request, cookie: str) -> str:
     return cookie
 
 
+@app.exception_handler(Exception)
 async def on_invalid_cookie(request: Request, exc: InvalidToken) -> Response:
     response = Response(status_code=status.HTTP_401_UNAUTHORIZED)
-    response.delete_cookie(settings.COOKIE_NAME)
+    response.delete_cookie(settings.SESSION_COOKIE_NAME)
     return response
 
 
@@ -84,8 +86,6 @@ connect(
     settings=settings,
     backend_adapter_loader=on_load_backend_adapter,
     on_load_cookie=on_load_cookie,
-    on_invalid_cookie=on_invalid_cookie,
-    on_missing_session=on_missing_session,
 )
 
 
@@ -93,7 +93,7 @@ connect(
 async def init_session(
     response: Response, manager: SessionManager = Depends(get_session_manager)
 ) -> Response:
-    response = manager.open_session(response, await session_id_generator(app))
+    response = manager.set_cookie(response, session_id_generator(app))
     response.status_code = status.HTTP_200_OK
     return response
 
@@ -141,6 +141,6 @@ async def close_session(
     response: Response,
     manager: SessionManager = Depends(get_session_manager),
 ) -> Response:
-    response = manager.close_session(response)
+    response = manager.unset_cookie(response)
     response.status_code = status.HTTP_200_OK
     return response
