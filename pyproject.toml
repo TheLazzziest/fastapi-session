@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fastapi-session"
-version = "0.8.0"
+version = "0.8.1"
 description = "A fastapi library for managing session of different types"
 authors = ["Maxim Yakovenko <mxyakovenko9@gmail.com>", "Zarlo <5899@zarlo.dev>"]
 license = "MIT"
@@ -41,7 +41,7 @@ requests = "^2.25.1"
 asgi-lifespan = "^1.0.1"
 
 [tool.poetry.urls]
-issues = "https://github.com/TheLazzziest/fastapi_session"
+issues = "https://github.com/TheLazzziest/fastapi-session/issues"
 
 [build-system]
 requires = ["poetry>=0.12"]
