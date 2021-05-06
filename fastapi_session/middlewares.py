@@ -36,7 +36,10 @@ class SessionMiddleware:
         if self.manager.has_cookie(request):
             try:
                 scope["session"] = await self.manager.load_session(
-                    request, self.manager.get_cookie(request)
+                    request,
+                    await self.manager.postprocess_cookie(
+                        request, self.manager.get_cookie(request)
+                    ),
                 )
             except InvalidCookieException as exc:
                 if self.strict:
