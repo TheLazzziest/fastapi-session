@@ -25,7 +25,10 @@ class SessionManager:
         signer: typing.Type[Fernet],
         settings: typing.Type[SessionSettings],
         on_load_cookie: typing.Optional[
-            typing.Callable[[Request, str], typing.Awaitable[str]]
+            typing.Callable[
+                [Request, typing.Hashable],
+                typing.Union[typing.Hashable, typing.Awaitable[typing.Hashable]],
+            ]
         ] = None,
         backend_adapter: typing.Optional[Connection] = None,
         loop: typing.Optional[asyncio.AbstractEventLoop] = None,
@@ -47,7 +50,7 @@ class SessionManager:
 
     async def __call__(self, request: Request) -> AsyncSession:
         """Try to load a user session from the incoming request."""
-        if "session" not in request or request["session"] is None:
+        if request["session"] is None:
             raise MissingSessionException(detail="A user session is missing")
         return request["session"]
 
@@ -57,15 +60,25 @@ class SessionManager:
             self._secret, sha256(self._secret.encode("utf-8")).hexdigest()
         )
 
+    async def postprocess_cookie(
+        self, request: Request, cookie: typing.Hashable
+    ) -> typing.Hashable:
+        """Try to pass an extracted cookie to a user defined callback for postprocessing."""
+
+        if self._on_load_cookie is None:
+            return cookie
+
+        if asyncio.iscoroutinefunction(self._on_load_cookie):
+            cookie = await self._on_load_cookie(request, cookie)
+        else:
+            cookie = self._on_load_cookie(request, cookie)
+
+        return cookie
+
     async def load_session(
         self, request: Request, session_id: Hashable
     ) -> AsyncSession:
         """Initialize a session storage for a user session."""
-        session_id = (
-            await self._on_load_cookie(request, session_id)
-            if self._on_load_cookie is not None
-            else session_id
-        )
         return await AsyncSession.create(
             encryptor=self.encryptor,
             namespace=create_namespace(
