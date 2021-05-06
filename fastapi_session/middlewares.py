@@ -31,18 +31,15 @@ class SessionMiddleware:
             return
 
         request = Request(scope, receive, send)
-        if not self.manager.has_cookie(request):
-            await self.app(scope, receive, send)
-            return
+        scope["session"] = None
 
-        try:
-            scope["session"] = await self.manager.load_session(
-                request, self.manager.get_cookie(request)
-            )
-        except InvalidCookieException as exc:
-            if self.strict:
-                raise exc from None
-            else:
-                scope["session"] = None
+        if self.manager.has_cookie(request):
+            try:
+                scope["session"] = await self.manager.load_session(
+                    request, self.manager.get_cookie(request)
+                )
+            except InvalidCookieException as exc:
+                if self.strict:
+                    raise exc from None
 
         await self.app(scope, receive, send)
